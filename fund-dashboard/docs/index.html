@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>基金Dashboard - Fund Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .metric-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        .metric-card h3 {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+        .metric-change {
+            font-size: 1rem;
+            margin-top: 5px;
+        }
+        .positive { color: #10b981; }
+        .negative { color: #ef4444; }
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        .chart-container h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+        .attribution-section {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .attribution-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .attribution-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .attribution-item {
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .attribution-item.asset { background: #e0e7ff; color: #4f46e5; }
+        .attribution-item.fx { background: #d1fae5; color: #10b981; }
+        .attribution-item.fee { background: #fef3c7; color: #f59e0b; }
+        .attribution-item.other { background: #fce7f3; color: #ec4899; }
+        footer {
+            text-align: center;
+            color: white;
+            opacity: 0.8;
+            padding: 20px;
+        }
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            header h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Global Feeder Fund Dashboard</h1>
+            <p>Real-time fund performance monitoring & attribution analysis</p>
+        </header>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <h3>YTD Return</h3>
+                <div class="metric-value positive">+6.5%</div>
+                <div class="metric-change positive">↑ 1.2% vs last month</div>
+            </div>
+            <div class="metric-card">
+                <h3>ITD Return</h3>
+                <div class="metric-value positive">+16.5%</div>
+                <div class="metric-change positive">Since inception</div>
+            </div>
+            <div class="metric-card">
+                <h3>Current NAV</h3>
+                <div class="metric-value">10.65</div>
+                <div class="metric-change">USD-based</div>
+            </div>
+            <div class="metric-card">
+                <h3>AUM</h3>
+                <div class="metric-value">$45.2M</div>
+                <div class="metric-change positive">↑ $2.9M this month</div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h2>📈 Monthly Performance</h2>
+                <canvas id="performanceChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h2>💰 Subscriptions by Distributor</h2>
+                <canvas id="subscriptionChart"></canvas>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-container">
+                <h2>🌍 Underlying Asset Price (USD)</h2>
+                <canvas id="assetPriceChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <h2>💱 USD/CNY Exchange Rate</h2>
+                <canvas id="fxChart"></canvas>
+            </div>
+        </div>
+
+        <div class="attribution-section">
+            <h2>📊 Attribution Analysis (Latest Month)</h2>
+            <div class="attribution-grid">
+                <div class="attribution-item asset">
+                    <h3>Underlying Asset</h3>
+                    <div style="font-size: 1.5rem; font-weight: bold;">+1.7%</div>
+                </div>
+                <div class="attribution-item fx">
+                    <h3>FX Impact</h3>
+                    <div style="font-size: 1.5rem; font-weight: bold;">+0.21%</div>
+                </div>
+                <div class="attribution-item fee">
+                    <h3>Fees</h3>
+                    <div style="font-size: 1.5rem; font-weight: bold;">-0.05%</div>
+                </div>
+                <div class="attribution-item other">
+                    <h3>Other</h3>
+                    <div style="font-size: 1.5rem; font-weight: bold;">+0.05%</div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2026 Fund Dashboard | Data updated: March 2026</p>
+            <p style="margin-top: 10px; font-size: 0.9rem;">
+                <a href="https://github.com/heyyting/fund-dashboard" style="color: white;">View on GitHub</a>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Performance Chart
+        const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+        new Chart(performanceCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan 2026', 'Feb 2026', 'Mar 2026'],
+                datasets: [{
+                    label: 'Fund Return (%)',
+                    data: [2.5, 1.95, 1.91],
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }, {
+                    label: 'Benchmark (%)',
+                    data: [2.1, 1.8, 1.7],
+                    borderColor: '#10b981',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: v => v + '%' }
+                    }
+                }
+            }
+        });
+
+        // Subscription Chart
+        const subscriptionCtx = document.getElementById('subscriptionChart').getContext('2d');
+        new Chart(subscriptionCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Jan 2026', 'Feb 2026', 'Mar 2026'],
+                datasets: [{
+                    label: 'Distributor A',
+                    data: [1500000, 1200000, 1800000],
+                    backgroundColor: '#4f46e5'
+                }, {
+                    label: 'Distributor B',
+                    data: [800000, 950000, 1100000],
+                    backgroundColor: '#10b981'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    y: {
+                        ticks: {
+                            callback: v => '$' + (v/1000000).toFixed(1) + 'M'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Asset Price Chart
+        const assetCtx = document.getElementById('assetPriceChart').getContext('2d');
+        new Chart(assetCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan 31', 'Feb 28', 'Mar 31'],
+                datasets: [{
+                    label: 'Asset Price (USD)',
+                    data: [102.5, 105.2, 107.8],
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    y: {
+                        ticks: { callback: v => '$' + v }
+                    }
+                }
+            }
+        });
+
+        // FX Rate Chart
+        const fxCtx = document.getElementById('fxChart').getContext('2d');
+        new Chart(fxCtx, {
+            type: 'line',
+            data: {
+                labels: ['Jan 31', 'Feb 28', 'Mar 31'],
+                datasets: [{
+                    label: 'USD/CNY',
+                    data: [7.15, 7.18, 7.20],
+                    borderColor: '#ec4899',
+                    backgroundColor: 'rgba(236, 72, 153, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
